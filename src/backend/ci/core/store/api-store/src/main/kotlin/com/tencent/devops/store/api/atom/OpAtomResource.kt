@@ -199,7 +199,7 @@ interface OpAtomResource {
         @ApiParam(value = "用户ID", required = true, defaultValue = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
         userId: String,
-        @ApiParam("atomCode", required = true)
+        @ApiParam("插件code", required = true)
         @FormDataParam("atomCode")
         atomCode: String,
         @ApiParam("文件", required = true)
