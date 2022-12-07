@@ -37,16 +37,14 @@ import com.tencent.devops.common.api.util.UUIDUtil
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.service.utils.CommonUtils
 import com.tencent.devops.common.service.utils.MessageCodeUtil
-import com.tencent.devops.common.service.utils.ZipUtil
 import com.tencent.devops.store.constant.StoreMessageCode
-import org.glassfish.jersey.media.multipart.FormDataContentDisposition
+import com.tencent.devops.store.utils.StoreUtils
 import org.slf4j.LoggerFactory
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.net.URL
-import java.nio.file.Files
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
