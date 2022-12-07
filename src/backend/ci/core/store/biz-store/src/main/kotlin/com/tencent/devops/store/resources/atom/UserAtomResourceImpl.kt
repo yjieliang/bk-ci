@@ -40,6 +40,7 @@ import com.tencent.devops.store.pojo.common.VersionInfo
 import com.tencent.devops.store.pojo.common.UnInstallReq
 import com.tencent.devops.store.service.atom.AtomReleaseService
 import com.tencent.devops.store.service.atom.AtomService
+import com.tencent.devops.store.service.atom.OpAtomService
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition
 import org.springframework.beans.factory.annotation.Autowired
 import java.io.InputStream
@@ -47,6 +48,7 @@ import java.io.InputStream
 @RestResource
 class UserAtomResourceImpl @Autowired constructor(
     private val atomService: AtomService,
+    private val opAtomService: OpAtomService,
     private val atomReleaseService: AtomReleaseService
     ) : UserAtomResource {
 
@@ -147,7 +149,7 @@ class UserAtomResourceImpl @Autowired constructor(
         inputStream: InputStream,
         disposition: FormDataContentDisposition
     ): Result<Boolean> {
-        return atomReleaseService.releaseAtom(
+        return opAtomService.releaseAtom(
             userId = userId,
             atomCode = atomCode,
             inputStream = inputStream,
