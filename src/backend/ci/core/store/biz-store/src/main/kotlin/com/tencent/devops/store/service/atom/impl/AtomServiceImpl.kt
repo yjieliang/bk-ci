@@ -124,14 +124,14 @@ import com.tencent.devops.store.service.common.StoreProjectService
 import com.tencent.devops.store.service.common.StoreUserService
 import com.tencent.devops.store.utils.StoreUtils
 import com.tencent.devops.store.utils.VersionUtils
+import java.math.BigDecimal
+import java.time.LocalDateTime
+import java.util.concurrent.TimeUnit
 import org.apache.commons.collections4.ListUtils
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import java.math.BigDecimal
-import java.time.LocalDateTime
-import java.util.concurrent.TimeUnit
 
 /**
  * 插件业务逻辑类
@@ -406,7 +406,7 @@ abstract class AtomServiceImpl @Autowired constructor() : AtomService {
                 installed = if (queryProjectAtomFlag) true else installedAtomList?.contains(atomCode),
                 honorInfos = honorInfos,
                 indexInfos = indexInfos,
-                hotFlag = it[KEY_HOT_FLAG] as Boolean
+                hotFlag = it[KEY_HOT_FLAG] as? Boolean
             )
             dataList.add(pipelineAtomRespItem)
         }
