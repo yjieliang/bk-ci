@@ -34,7 +34,6 @@ import com.tencent.devops.common.api.util.OkhttpUtils
 import com.tencent.devops.common.dispatch.sdk.BuildFailureException
 import com.tencent.devops.dispatch.kubernetes.pojo.KubernetesResult
 import com.tencent.devops.dispatch.kubernetes.pojo.common.ErrorCodeEnum
-import io.fabric8.kubernetes.api.model.Service
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
@@ -68,7 +67,7 @@ class IngressClient @Autowired constructor(
         return JsonUtil.getObjectMapper().readValue(responseBody)
     }
 
-    fun getIngressByName(userId: String, ingressName: String): KubernetesResult<Service> {
+    fun getIngressByName(userId: String, ingressName: String): KubernetesResult<Ingress> {
         val url = "/api/ingress/$ingressName"
         val request = clientCommon.baseRequest(userId, url).get().build()
         logger.info("Get ingress: $ingressName request url: $url, userId: $userId")

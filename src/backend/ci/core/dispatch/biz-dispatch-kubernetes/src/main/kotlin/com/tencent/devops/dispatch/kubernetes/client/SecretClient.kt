@@ -35,7 +35,6 @@ import com.tencent.devops.common.dispatch.sdk.BuildFailureException
 import com.tencent.devops.dispatch.kubernetes.pojo.KubernetesResult
 import com.tencent.devops.dispatch.kubernetes.pojo.common.ErrorCodeEnum
 import io.fabric8.kubernetes.api.model.Secret
-import io.fabric8.kubernetes.api.model.Service
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody
 import org.slf4j.LoggerFactory
@@ -68,7 +67,7 @@ class SecretClient @Autowired constructor(
         return JsonUtil.getObjectMapper().readValue(responseBody)
     }
 
-    fun getSecretByName(userId: String, secretName: String): KubernetesResult<Service> {
+    fun getSecretByName(userId: String, secretName: String): KubernetesResult<Secret> {
         val url = "/api/secrets/$secretName"
         val request = clientCommon.baseRequest(userId, url).get().build()
         logger.info("Get secret: $secretName request url: $url, userId: $userId")
