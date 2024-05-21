@@ -389,6 +389,7 @@ class StoreIndexManageServiceImpl @Autowired constructor(
                 tStoreIndexElementDetailRecord.storeType = storeType.type.toByte()
                 tStoreIndexElementDetailRecord.indexId = indexId
                 tStoreIndexElementDetailRecord.indexCode = TRUSTWORTHY_INDEX_CODE
+                tStoreIndexElementDetailRecord.elementCode = CERTIFICATION_DEPT
                 tStoreIndexElementDetailRecord.elementName = deptCode
                 tStoreIndexElementDetailRecord.elementValue = "Certified"
                 tStoreIndexElementDetailRecord.remark = null
@@ -444,5 +445,6 @@ class StoreIndexManageServiceImpl @Autowired constructor(
         private val logger = LoggerFactory.getLogger(StoreIndexManageServiceImpl::class.java)
         private const val TRUSTWORTHY_INDEX_CODE = "storeTrustworthyIndex"
         private const val TRUSTWORTHY_INDEX_LEVEL_NAME = "verifiedComponents"
+        private const val CERTIFICATION_DEPT = "CertificationDept"
     }
 }
