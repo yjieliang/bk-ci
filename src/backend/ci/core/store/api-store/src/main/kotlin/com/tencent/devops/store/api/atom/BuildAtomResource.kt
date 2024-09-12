@@ -105,7 +105,7 @@ interface BuildAtomResource {
 
     @Operation(summary = "根据插件代码获取插件详细信息")
     @GET
-    @Path("/atoms/{atomCode}/detail")
+    @Path("/{atomCode}/detail")
     @BkInterfaceI18n(
         keyPrefixNames = ["ATOM", "{data.atomCode}", "{data.version}", "releaseInfo"]
     )
@@ -120,7 +120,7 @@ interface BuildAtomResource {
 
     @Operation(summary = "根据插件分支获取分支最新测试版本号")
     @GET
-    @Path("/atoms/{atomCode}/branch/{branch}/version")
+    @Path("/{atomCode}/branch/{branch}/version")
     fun getLatestBranchTestVersion(
         @Parameter(description = "插件代码", required = true)
         @PathParam("atomCode")
