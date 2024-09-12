@@ -49,6 +49,7 @@ import com.tencent.devops.model.store.tables.TStoreStatisticsTotal
 import com.tencent.devops.model.store.tables.records.TAtomRecord
 import com.tencent.devops.repository.pojo.AtomRefRepositoryInfo
 import com.tencent.devops.repository.pojo.enums.VisibilityLevelEnum
+import com.tencent.devops.store.common.utils.VersionUtils
 import com.tencent.devops.store.pojo.atom.AtomBaseInfoUpdateRequest
 import com.tencent.devops.store.pojo.atom.AtomCreateRequest
 import com.tencent.devops.store.pojo.atom.AtomFeatureUpdateRequest
@@ -87,7 +88,8 @@ import com.tencent.devops.store.pojo.common.KEY_SERVICE_SCOPE
 import com.tencent.devops.store.pojo.common.KEY_UPDATE_TIME
 import com.tencent.devops.store.pojo.common.enums.StoreProjectTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
-import com.tencent.devops.store.common.utils.VersionUtils
+import java.net.URLDecoder
+import java.time.LocalDateTime
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Field
@@ -98,8 +100,6 @@ import org.jooq.Result
 import org.jooq.SelectOnConditionStep
 import org.jooq.impl.DSL
 import org.springframework.stereotype.Repository
-import java.net.URLDecoder
-import java.time.LocalDateTime
 
 @Suppress("ALL")
 @Repository
@@ -269,6 +269,26 @@ class AtomDao : AtomBaseDao() {
                 .orderBy(UPDATE_TIME.desc())
                 .limit(1)
                 .fetchOne()
+        }
+    }
+
+    fun countAtomByVersionPrefix(dslContext: DSLContext, atomCode: String, versionPrefix: String): Int {
+        return with(TAtom.T_ATOM) {
+            dslContext.selectCount().from(this)
+                .where(ATOM_CODE.eq(atomCode).and(VERSION.startsWith(versionPrefix)))
+                .fetchOne()!!.get(0) as Int
+        }
+    }
+
+    fun getVersionByBranch(dslContext: DSLContext, atomCode: String, branch: String): String? {
+        return with(TAtom.T_ATOM) {
+            dslContext.select(VERSION).from(this)
+                .where(ATOM_CODE.eq(atomCode).and(BRANCH.eq(branch)))
+                .orderBy(UPDATE_TIME.desc())
+                .limit(1)
+                .fetchOne()?.let {
+                    it[0].toString()
+                }
         }
     }
 

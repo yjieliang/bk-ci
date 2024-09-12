@@ -47,4 +47,8 @@ class SampleAtomServiceImpl : SampleAtomService, AtomServiceImpl() {
     ): Result<Boolean> {
         return Result(true)
     }
+
+    override fun getLatestBranchTestVersion(atomCode: String, branch: String): Result<String> {
+        return Result("")
+    }
 }

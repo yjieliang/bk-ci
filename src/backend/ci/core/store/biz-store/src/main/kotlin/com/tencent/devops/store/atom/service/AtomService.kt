@@ -219,4 +219,9 @@ interface AtomService {
      * @return 插件默认版本号
      */
     fun getAtomDefaultValidVersion(projectCode: String, atomCode: String): Result<VersionInfo?>
+
+    /**
+     * 根据分支获取插件分支最新测试版本号
+     */
+    fun getLatestBranchTestVersion(atomCode: String, branch: String): Result<String?>
 }

@@ -155,7 +155,7 @@ object StoreMessageCode {
     const val NO_COMPONENT_ADMIN_AND_CREATETOR_PERMISSION = "2120925" // 无组件{0}管理员或当前版本创建者权限，请联系组件管理员。
     const val USER_NOT_IS_STORE_MEMBER = "2120926" // 研发商店：用户{0}不是组件成员
     const val GET_BRANCH_COMMIT_INFO_ERROR = "2120927" // 获取分支提交信息异常
-    const val STORE_BRANCH_NO_NEW_COMMIT = "2120928" // 代码未变更，分支测试版本生成失败
+    const val STORE_BRANCH_NO_NEW_COMMIT = "2120928" // 代码未变更，分支测试版本生成失败，分支最新提交时间[{0}],版本最近更新时间[{1}]
     const val STORE_VERSION_IS_NOT_FINISH = "2120929" // 研发商店：组件[{0}]的[{1}]版本发布未结束，请稍后再试
     const val STORE_RELEASE_STEPS_ERROR = "2120930" // 研发商店：组件发布流程中状态变更顺序不正确
     const val STORE_PROJECT_COMPONENT_NO_PERMISSION = "2120931" // 研发商店：项目[{0}]没有组件[{1}]的使用权限，请先安装组件

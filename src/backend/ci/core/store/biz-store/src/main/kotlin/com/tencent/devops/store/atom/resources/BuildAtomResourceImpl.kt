@@ -35,12 +35,15 @@ import com.tencent.devops.store.pojo.common.publication.StoreProcessInfo
 import com.tencent.devops.store.pojo.common.version.VersionInfo
 import com.tencent.devops.store.atom.service.AtomReleaseService
 import com.tencent.devops.store.atom.service.AtomService
+import com.tencent.devops.store.atom.service.MarketAtomService
+import com.tencent.devops.store.pojo.atom.AtomVersion
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestResource
 class BuildAtomResourceImpl @Autowired constructor(
     private val atomService: AtomService,
-    private val atomReleaseService: AtomReleaseService
+    private val atomReleaseService: AtomReleaseService,
+    private val marketAtomService: MarketAtomService
 ) : BuildAtomResource {
 
     override fun getAtomDefaultValidVersion(projectCode: String, atomCode: String): Result<VersionInfo?> {
@@ -62,5 +65,13 @@ class BuildAtomResourceImpl @Autowired constructor(
 
     override fun getProcessInfo(userId: String, atomId: String): Result<StoreProcessInfo> {
         return atomReleaseService.getProcessInfo(userId, atomId)
+    }
+
+    override fun getAtomByCode(atomCode: String, username: String): Result<AtomVersion?> {
+        return marketAtomService.getNewestAtomByCode(username, atomCode)
+    }
+
+    override fun getLatestBranchTestVersion(atomCode: String, branch: String): Result<String?> {
+        return atomService.getLatestBranchTestVersion(atomCode, branch)
     }
 }
