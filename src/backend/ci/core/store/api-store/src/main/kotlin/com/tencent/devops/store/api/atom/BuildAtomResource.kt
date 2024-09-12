@@ -118,7 +118,7 @@ interface BuildAtomResource {
         username: String
     ): Result<AtomVersion?>
 
-    @Operation(summary = "根据插件代码获取插件详细信息")
+    @Operation(summary = "根据插件分支获取分支最新测试版本号")
     @GET
     @Path("/atoms/{atomCode}/branch/{branch}/version")
     @BkInterfaceI18n(
