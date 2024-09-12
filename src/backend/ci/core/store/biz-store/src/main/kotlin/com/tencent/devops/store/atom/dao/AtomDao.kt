@@ -286,9 +286,7 @@ class AtomDao : AtomBaseDao() {
                 .where(ATOM_CODE.eq(atomCode).and(BRANCH.eq(branch)))
                 .orderBy(UPDATE_TIME.desc())
                 .limit(1)
-                .fetchOne()?.let {
-                    it[0].toString()
-                }
+                .fetchOne()?.get(0) as String
         }
     }
 
