@@ -31,10 +31,13 @@ import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID
 import com.tencent.devops.common.api.auth.AUTH_HEADER_USER_ID_DEFAULT_VALUE
 import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
+import com.tencent.devops.process.pojo.`var`.`do`.PublicVarDO
 import com.tencent.devops.process.pojo.`var`.`do`.PublicVarGroupDO
+import com.tencent.devops.process.pojo.`var`.`do`.PublicVarReleaseHistoryDO
+import com.tencent.devops.process.pojo.`var`.`do`.PublicVarVariableReferenceDO
 import com.tencent.devops.process.pojo.`var`.`do`.PublicVerGroupReferenceDO
-import com.tencent.devops.process.pojo.`var`.po.PublicVarGroupYamlStringPO
 import com.tencent.devops.process.pojo.`var`.vo.PublicVarGroupVO
+import com.tencent.devops.process.pojo.`var`.vo.PublicVarGroupYamlStringVO
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -43,7 +46,6 @@ import jakarta.ws.rs.DELETE
 import jakarta.ws.rs.GET
 import jakarta.ws.rs.HeaderParam
 import jakarta.ws.rs.POST
-import jakarta.ws.rs.PUT
 import jakarta.ws.rs.Path
 import jakarta.ws.rs.PathParam
 import jakarta.ws.rs.Produces
@@ -83,20 +85,6 @@ interface UserPublicVarGroupResource {
         projectId: String
     ): Result<Page<PublicVarGroupDO>>
 
-    @Operation(summary = "编辑变量组")
-    @PUT
-    @Path("/{groupName}")
-    fun updateGroup(
-        @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-        @HeaderParam(AUTH_HEADER_USER_ID)
-        userId: String,
-        @Parameter(description = "变量组名称", required = true)
-        @PathParam("groupName")
-        groupName: String,
-        @Parameter(description = "变量组更新数据", required = true)
-        group: PublicVarGroupVO
-    ): Result<Boolean>
-
     @Operation(summary = "导入公共变量组(YAML格式)")
     @POST
     @Path("/projects/{projectId}/import")
@@ -108,7 +96,7 @@ interface UserPublicVarGroupResource {
         @PathParam("projectId")
         projectId: String,
         @Parameter(description = "YAML文件", required = true)
-        yaml: PublicVarGroupYamlStringPO
+        yaml: PublicVarGroupYamlStringVO
     ): Result<String>
 
     @Operation(summary = "导出公共变量组(YAML格式)")
@@ -122,21 +110,6 @@ interface UserPublicVarGroupResource {
         @PathParam("groupName")
         groupName: String
     ): Response
-
-    @Operation(summary = "发布变量组")
-    @POST
-    @Path("/{groupName}/publish")
-    fun publishGroup(
-        @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
-        @HeaderParam(AUTH_HEADER_USER_ID)
-        userId: String,
-        @Parameter(description = "变量组名称", required = true)
-        @PathParam("groupName")
-        groupName: String,
-        @Parameter(description = "版本描述", required = true)
-        @QueryParam("versionDesc")
-        versionDesc: String
-    ): Result<Boolean>
 
     @Operation(summary = "删除变量组")
     @DELETE
@@ -160,11 +133,62 @@ interface UserPublicVarGroupResource {
         @Parameter(description = "变量组名称", required = true)
         @PathParam("groupName")
         groupName: String,
-        @Parameter(description = "页码", required = false)
+        @Parameter(description = "页码", required = true)
         @QueryParam("page")
-        page: Int?,
-        @Parameter(description = "每页数量", required = false)
+        page: Int,
+        @Parameter(description = "每页数量", required = true)
         @QueryParam("pageSize")
-        pageSize: Int?
+        pageSize: Int
     ): Result<Page<PublicVerGroupReferenceDO>>
+
+    @Operation(summary = "获取变量组中的变量列表")
+    @GET
+    @Path("/{groupName}/variables")
+    fun getVariables(
+        @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @Parameter(description = "变量组名称", required = true)
+        @PathParam("groupName")
+        groupName: String
+    ): Result<List<PublicVarDO>>
+
+    @Operation(summary = "获取变量组的发布记录")
+    @GET
+    @Path("/{groupName}/releaseHistory")
+    fun getReleaseHistory(
+        @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @Parameter(description = "变量组名称", required = true)
+        @PathParam("groupName")
+        groupName: String,
+        @Parameter(description = "页码", required = true)
+        @QueryParam("page")
+        page: Int,
+        @Parameter(description = "每页数量", required = true)
+        @QueryParam("pageSize")
+        pageSize: Int
+    ): Result<Page<PublicVarReleaseHistoryDO>>
+
+    @Operation(summary = "获取变量的引用记录")
+    @GET
+    @Path("/{groupName}/variables/{variableName}/references")
+    fun getVariableReferences(
+        @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
+        @HeaderParam(AUTH_HEADER_USER_ID)
+        userId: String,
+        @Parameter(description = "变量组名称", required = true)
+        @PathParam("groupName")
+        groupName: String,
+        @Parameter(description = "变量名", required = true)
+        @PathParam("variableName")
+        variableName: String,
+        @Parameter(description = "页码", required = true)
+        @QueryParam("page")
+        page: Int,
+        @Parameter(description = "每页数量", required = true)
+        @QueryParam("pageSize")
+        pageSize: Int
+    ): Result<Page<PublicVarVariableReferenceDO>>
 }

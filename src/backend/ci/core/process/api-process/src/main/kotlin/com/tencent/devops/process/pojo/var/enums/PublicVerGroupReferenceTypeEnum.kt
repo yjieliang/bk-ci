@@ -29,6 +29,5 @@ package com.tencent.devops.process.pojo.`var`.enums
 
 enum class PublicVerGroupReferenceTypeEnum {
     PIPELINE, // 流水线
-    TEMPLATE, // 模板
-    JOB_TEMPLATE, // JOB模板
+    TEMPLATE // 模板
 }

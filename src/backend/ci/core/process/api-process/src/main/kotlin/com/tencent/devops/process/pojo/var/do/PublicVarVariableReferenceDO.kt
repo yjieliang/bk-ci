@@ -31,14 +31,12 @@ import com.tencent.devops.process.pojo.`var`.enums.PublicVerGroupReferenceTypeEn
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
-@Schema(title = "公共变量组引用变量组的流水线/模板基本信息")
-data class PublicVerGroupReferenceDO(
+@Schema(title = "流水线公共变量引用信息")
+data class PublicVarVariableReferenceDO(
     @get:Schema(title = "流水线/模板名称")
     val referenceName: String,
     @get:Schema(title = "流水线/模板类型")
     val referenceType: PublicVerGroupReferenceTypeEnum,
-    @get:Schema(title = "实际引用变量数")
-    val referenceCount: Int,
     @get:Schema(title = "修改人")
     val modifier: String,
     @get:Schema(title = "修改时间")

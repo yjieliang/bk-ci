@@ -25,12 +25,12 @@
  * SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package com.tencent.devops.process.pojo.`var`.po
+package com.tencent.devops.process.pojo.`var`.vo
 
 import io.swagger.v3.oas.annotations.media.Schema
 
 @Schema(title = "公共变量组Yaml内容")
-data class PublicVarGroupYamlStringPO(
+data class PublicVarGroupYamlStringVO(
     @get:Schema(title = "公共变量组YAML文件内容")
     val yaml: String
 )
