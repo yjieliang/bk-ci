@@ -85,7 +85,7 @@ interface UserPublicVarGroupResource {
 
     @Operation(summary = "编辑变量组")
     @PUT
-    @Path("/{groupId}")
+    @Path("/{groupName}")
     fun updateGroup(
         @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
@@ -113,7 +113,7 @@ interface UserPublicVarGroupResource {
 
     @Operation(summary = "导出公共变量组(YAML格式)")
     @GET
-    @Path("/{groupId}/export")
+    @Path("/{groupName}/export")
     fun exportGroup(
         @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
@@ -152,7 +152,7 @@ interface UserPublicVarGroupResource {
 
     @Operation(summary = "获取引用变量组的流水线/模板列表")
     @GET
-    @Path("/{groupId}/references")
+    @Path("/{groupName}/references")
     fun getReferences(
         @Parameter(description = "用户ID", required = true, example = AUTH_HEADER_USER_ID_DEFAULT_VALUE)
         @HeaderParam(AUTH_HEADER_USER_ID)
