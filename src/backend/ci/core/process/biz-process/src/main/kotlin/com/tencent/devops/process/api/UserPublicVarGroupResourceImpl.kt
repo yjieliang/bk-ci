@@ -31,10 +31,16 @@ import com.tencent.devops.common.api.pojo.Page
 import com.tencent.devops.common.api.pojo.Result
 import com.tencent.devops.common.web.RestResource
 import com.tencent.devops.process.api.user.UserPublicVarGroupResource
+import com.tencent.devops.process.pojo.`var`.`do`.PublicVarDO
 import com.tencent.devops.process.pojo.`var`.`do`.PublicVarGroupDO
+import com.tencent.devops.process.pojo.`var`.`do`.PublicVarReleaseHistoryDO
+import com.tencent.devops.process.pojo.`var`.`do`.PublicVarVariableReferenceDO
+import com.tencent.devops.process.pojo.`var`.`do`.PublicVerGroupReferenceDO
 import com.tencent.devops.process.pojo.`var`.dto.PublicVarGroupDTO
 import com.tencent.devops.process.pojo.`var`.vo.PublicVarGroupVO
+import com.tencent.devops.process.pojo.`var`.vo.PublicVarGroupYamlStringVO
 import com.tencent.devops.process.service.`var`.PublicVarGroupService
+import jakarta.ws.rs.core.Response
 import org.springframework.beans.factory.annotation.Autowired
 
 @RestResource
@@ -55,6 +61,50 @@ class UserPublicVarGroupResourceImpl @Autowired constructor(
     }
 
     override fun getGroups(userId: String, projectId: String): Result<Page<PublicVarGroupDO>> {
+        return Result(Page(0, 0, 0, emptyList()))
+    }
+
+    override fun importGroup(userId: String, projectId: String, yaml: PublicVarGroupYamlStringVO): Result<String> {
+        return Result("")
+    }
+
+    override fun exportGroup(userId: String, groupName: String): Response {
         TODO("Not yet implemented")
+    }
+
+    override fun deleteGroup(userId: String, groupName: String): Result<Boolean> {
+        return Result(false)
+    }
+
+    override fun getReferences(
+        userId: String,
+        groupName: String,
+        page: Int,
+        pageSize: Int
+    ): Result<Page<PublicVerGroupReferenceDO>> {
+        return Result(Page(0, 0, 0, emptyList()))
+    }
+
+    override fun getVariables(userId: String, groupName: String): Result<List<PublicVarDO>> {
+        return Result(emptyList())
+    }
+
+    override fun getReleaseHistory(
+        userId: String,
+        groupName: String,
+        page: Int,
+        pageSize: Int
+    ): Result<Page<PublicVarReleaseHistoryDO>> {
+        return Result(Page(0, 0, 0, emptyList()))
+    }
+
+    override fun getVariableReferences(
+        userId: String,
+        groupName: String,
+        variableName: String,
+        page: Int,
+        pageSize: Int
+    ): Result<Page<PublicVarVariableReferenceDO>> {
+        return Result(Page(0, 0, 0, emptyList()))
     }
 }
