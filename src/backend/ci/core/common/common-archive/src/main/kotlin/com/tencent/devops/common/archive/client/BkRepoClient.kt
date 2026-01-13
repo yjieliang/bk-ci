@@ -97,6 +97,14 @@ import com.tencent.devops.common.service.config.CommonConfig
 import com.tencent.devops.common.service.utils.HomeHostUtil
 import io.opentelemetry.api.trace.Span
 import jakarta.ws.rs.NotFoundException
+import java.io.File
+import java.io.IOException
+import java.io.InputStream
+import java.io.OutputStream
+import java.net.URLEncoder
+import java.nio.file.FileSystems
+import java.nio.file.Paths
+import java.util.UUID
 import okhttp3.Credentials
 import okhttp3.Headers.Companion.toHeaders
 import okhttp3.MediaType
@@ -110,14 +118,6 @@ import org.slf4j.LoggerFactory
 import org.springframework.data.domain.Sort.Direction
 import org.springframework.stereotype.Component
 import org.springframework.util.FileCopyUtils
-import java.io.File
-import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
-import java.net.URLEncoder
-import java.nio.file.FileSystems
-import java.nio.file.Paths
-import java.util.UUID
 
 @Component
 class BkRepoClient constructor(
@@ -1347,7 +1347,9 @@ class BkRepoClient constructor(
         val request = Request.Builder()
             .url(url)
             .headers(getCommonHeaders(userId, projectId).toHeaders()).build()
-        return doRequest(request).resolveResponse<Response<QueryNodeInfo>>()!!.data!!
+        return doRequest(request).resolveResponse<Response<QueryNodeInfo>>()?.data ?: throw RemoteServiceException(
+            "get store component pkg size failed"
+        )
     }
 
     companion object {

@@ -13,6 +13,7 @@ import com.tencent.devops.store.pojo.common.StorePackageInfoReq
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.pojo.common.version.StoreVersionSizeInfo
 import org.jooq.DSLContext
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
 
@@ -30,6 +31,10 @@ class StoreAtomPkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSer
 
     @Autowired
     lateinit var redisOperation: RedisOperation
+
+    companion object {
+        private val logger = LoggerFactory.getLogger(StoreAtomPkgSizeHandleServiceImpl::class.java)
+    }
 
     override fun batchUpdateComponentsVersionSize() {
         val count = atomDao.countComponent(dslContext, AtomStatusEnum.RELEASED.status.toByte())
@@ -128,6 +133,9 @@ class StoreAtomPkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSer
                     pkgSize = JsonUtil.toJson(mutableList)
                 )
             }
+        } catch (e: Exception) {
+            logger.warn("updateComponentVersionSize error", e)
+            return false
         } finally {
             redisLock.unlock()
         }
