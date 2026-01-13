@@ -67,28 +67,10 @@ class SampleArchiveStorePkgToBkRepoServiceImpl : ArchiveStorePkgToBkRepoServiceI
     }
 
     override fun getRepoStoreConfig(storeType: StoreTypeEnum): Triple<String, String, String> {
-
-        val repoName = when (storeType) {
-            StoreTypeEnum.ATOM -> {
-                REPO_NAME_PLUGIN
-            }
-
-            StoreTypeEnum.SERVICE -> {
-                BkRepoEnum.SERVICE.repoName
-            }
-
-            StoreTypeEnum.DEVX -> {
-                BkRepoEnum.DEVX.repoName
-            }
-
-            else -> {
-                throw ErrorCodeException(errorCode = CommonMessageCode.ERROR_CLIENT_REST_ERROR)
-            }
-        }
         return Triple(
             bkRepoStoreConfig.bkrepoStoreProjectName,
             Credentials.basic(bkRepoStoreConfig.bkrepoStoreUserName, bkRepoStoreConfig.bkrepoStorePassword),
-            repoName
+            getBkRepoName(storeType)
         )
     }
 

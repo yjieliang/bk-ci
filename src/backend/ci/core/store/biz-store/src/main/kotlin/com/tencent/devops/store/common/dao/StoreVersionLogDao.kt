@@ -35,12 +35,12 @@ import com.tencent.devops.model.store.tables.records.TStoreVersionLogRecord
 import com.tencent.devops.store.pojo.atom.enums.AtomStatusEnum
 import com.tencent.devops.store.pojo.common.enums.ReleaseTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreStatusEnum
+import java.time.LocalDateTime
 import org.jooq.DSLContext
 import org.jooq.Record3
 import org.jooq.Record4
 import org.jooq.Result
 import org.springframework.stereotype.Repository
-import java.time.LocalDateTime
 
 @Repository
 class StoreVersionLogDao {
@@ -130,10 +130,10 @@ class StoreVersionLogDao {
             .from(tsb)
             .join(tsvl)
             .on(tsb.ID.eq(tsvl.STORE_ID))
-            .where(
-                tsb.STORE_CODE.eq(storeCode)
-                    .and(tsb.STORE_TYPE.eq(storeType).and(tsb.STATUS.eq(StoreStatusEnum.RELEASED.name)))
-            ).orderBy(tsb.UPDATE_TIME.desc())
+            .where(tsb.STORE_CODE.eq(storeCode))
+            .and(tsb.STORE_TYPE.eq(storeType)
+            .and(tsb.STATUS.eq(StoreStatusEnum.RELEASED.name)))
+            .orderBy(tsb.UPDATE_TIME.desc())
         baseStep.limit((page - 1) * pageSize, pageSize)
         return baseStep.fetch()
     }

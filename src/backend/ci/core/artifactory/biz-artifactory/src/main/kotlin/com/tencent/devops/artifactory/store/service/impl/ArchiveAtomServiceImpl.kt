@@ -60,6 +60,11 @@ import com.tencent.devops.store.pojo.common.StorePackageInfoReq
 import com.tencent.devops.store.pojo.common.TASK_JSON_NAME
 import com.tencent.devops.store.pojo.common.enums.ReleaseTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
+import java.io.File
+import java.io.InputStream
+import java.nio.file.Files
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.TimeUnit
 import org.apache.commons.io.FileUtils
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition
 import org.jooq.DSLContext
@@ -67,11 +72,6 @@ import org.jooq.impl.DSL
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.util.FileSystemUtils
-import java.io.File
-import java.io.InputStream
-import java.nio.file.Files
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 @Suppress("ALL")
 abstract class ArchiveAtomServiceImpl : ArchiveAtomService {
@@ -95,6 +95,9 @@ abstract class ArchiveAtomServiceImpl : ArchiveAtomService {
 
     @Autowired
     lateinit var bkRepoClient: BkRepoClient
+
+    @Autowired
+    lateinit var atomPkgSizeExecutor: ExecutorService
 
     override fun archiveAtom(
         userId: String,
@@ -384,7 +387,7 @@ abstract class ArchiveAtomServiceImpl : ArchiveAtomService {
         version: String,
         atomCode: String
     ) {
-        Executors.newFixedThreadPool(1).submit {
+        atomPkgSizeExecutor.submit {
             try {
                 val atomId = client.get(ServiceAtomResource::class).getAtomId(atomCode, version).data
                     ?: throw ErrorCodeException(
@@ -397,7 +400,7 @@ abstract class ArchiveAtomServiceImpl : ArchiveAtomService {
                 )
                 logger.info("asyncHandleAtomPkgSize is $updateAtomInfoResult")
             } catch (ignored: Throwable) {
-                logger.error("asyncHandleAtomPkgSize execute error", ignored)
+                logger.warn("asyncHandleAtomPkgSize execute error", ignored)
             }
         }
     }

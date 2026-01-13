@@ -48,6 +48,7 @@ import com.tencent.devops.store.pojo.common.KEY_STORE_CODE
 import com.tencent.devops.store.pojo.common.StoreBaseInfo
 import com.tencent.devops.store.pojo.common.enums.StoreProjectTypeEnum
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
+import java.time.LocalDateTime
 import org.jooq.Condition
 import org.jooq.DSLContext
 import org.jooq.Record
@@ -55,7 +56,6 @@ import org.jooq.Record4
 import org.jooq.Record5
 import org.jooq.Result
 import org.springframework.stereotype.Repository
-import java.time.LocalDateTime
 
 @Repository(value = "ATOM_COMMON_DAO")
 class AtomCommonDao : AbstractStoreCommonDao() {
@@ -212,6 +212,9 @@ class AtomCommonDao : AbstractStoreCommonDao() {
     ): Result<Record5<String, String, LocalDateTime, String, String>>? {
         val atom = TAtom.T_ATOM
         val atomVersionLog = TAtomVersionLog.T_ATOM_VERSION_LOG
+        val conditions = mutableListOf<Condition>()
+        conditions.add(atom.ATOM_STATUS.eq(AtomStatusEnum.RELEASED.status.toByte()))
+        conditions.add(atom.ATOM_CODE.eq(storeCode))
         val baseStep = dslContext.select(
             atom.VERSION,
             atomVersionLog.CONTENT,
@@ -222,7 +225,7 @@ class AtomCommonDao : AbstractStoreCommonDao() {
             .from(atom)
             .join(atomVersionLog)
             .on(atom.ID.eq(atomVersionLog.ATOM_ID))
-            .where(atom.ATOM_STATUS.eq(AtomStatusEnum.RELEASED.status.toByte()).and(atom.ATOM_CODE.eq(storeCode)))
+            .where(conditions)
             .orderBy(atom.UPDATE_TIME.desc())
             .limit((page - 1) * pageSize, pageSize)
 
