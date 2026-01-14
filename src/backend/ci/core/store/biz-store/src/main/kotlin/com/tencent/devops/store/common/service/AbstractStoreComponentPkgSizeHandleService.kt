@@ -35,9 +35,10 @@ abstract class AbstractStoreComponentPkgSizeHandleService {
             if (atomPackageInfos.isEmpty()) return null
 
             if (!osName.isNullOrBlank() && !osArch.isNullOrBlank()) {
-                return atomPackageInfos.firstOrNull {
+                val matchedPackage = atomPackageInfos.firstOrNull {
                     it.osName == osName && it.arch == osArch
-                }?.let {
+                }
+                return matchedPackage?.let {
                     formatSizeInMB(BigDecimal(it.size))
                 }
             }
