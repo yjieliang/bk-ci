@@ -34,6 +34,7 @@ class StoreAtomPkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSer
 
     companion object {
         private val logger = LoggerFactory.getLogger(StoreAtomPkgSizeHandleServiceImpl::class.java)
+        private const val UNIT = "MB"
     }
 
     override fun batchUpdateComponentsVersionSize() {
@@ -165,7 +166,7 @@ class StoreAtomPkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSer
             storeType = StoreTypeEnum.ATOM.name,
             version = version,
             packageSize = size,
-            unit = "MB"
+            unit = UNIT
         )
     }
 }

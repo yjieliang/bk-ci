@@ -1518,7 +1518,6 @@ class AtomDao : AtomBaseDao() {
         return with(TAtom.T_ATOM) {
             dslContext.select(ID).from(this)
                 .where(ATOM_CODE.eq(atomCode).and(VERSION.eq(version)))
-                .orderBy(CREATE_TIME.desc())
                 .limit(1)
                 .fetchOne()?.get(ID)
         }

@@ -209,7 +209,7 @@ class AtomCommonDao : AbstractStoreCommonDao() {
         storeCode: String,
         page: Int,
         pageSize: Int
-    ): Result<Record5<String, String, LocalDateTime, String, String>>? {
+    ): Result<Record5<String, String, LocalDateTime, String, String>> {
         val atom = TAtom.T_ATOM
         val atomVersionLog = TAtomVersionLog.T_ATOM_VERSION_LOG
         val conditions = mutableListOf<Condition>()
