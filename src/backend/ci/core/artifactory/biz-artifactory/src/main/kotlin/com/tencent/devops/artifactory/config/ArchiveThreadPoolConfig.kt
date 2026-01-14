@@ -40,7 +40,7 @@ class ArchiveThreadPoolConfig {
         return ThreadPoolTaskExecutor().apply {
             corePoolSize = 1
             maxPoolSize = 1
-            queueCapacity = 100
+            queueCapacity = 10
             setThreadNamePrefix("atom-pkg-size-")
             setWaitForTasksToCompleteOnShutdown(true)
             setAwaitTerminationSeconds(30)
