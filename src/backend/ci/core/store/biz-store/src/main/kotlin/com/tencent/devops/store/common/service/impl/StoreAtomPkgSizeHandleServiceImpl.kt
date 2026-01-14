@@ -126,12 +126,15 @@ class StoreAtomPkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSer
                 )
             } else {
                 val atomPackageInfoList = JsonUtil.to(size, object : TypeReference<List<StorePackageInfoReq>>() {})
-                val mutableList = atomPackageInfoList.toMutableList()
-                mutableList.addAll(storePackageInfoReqs)
+                // 使用 Map 进行去重，以 osName_arch 为键，新数据覆盖旧数据
+                val packageMap = atomPackageInfoList.associateBy { "${it.osName}_${it.arch}" }.toMutableMap()
+                storePackageInfoReqs.forEach { newPackage ->
+                    packageMap["${newPackage.osName}_${newPackage.arch}"] = newPackage
+                }
                 atomDao.updateComponentVersionInfo(
                     dslContext = dslContext,
                     storeId = storeId,
-                    pkgSize = JsonUtil.toJson(mutableList)
+                    pkgSize = JsonUtil.toJson(packageMap.values.toList())
                 )
             }
         } catch (e: Exception) {
