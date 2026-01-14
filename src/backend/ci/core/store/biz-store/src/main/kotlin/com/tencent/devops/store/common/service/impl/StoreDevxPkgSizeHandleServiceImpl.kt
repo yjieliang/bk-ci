@@ -8,6 +8,7 @@ import com.tencent.devops.common.redis.RedisLock
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.store.common.dao.StoreVersionLogDao
 import com.tencent.devops.store.common.service.AbstractStoreComponentPkgSizeHandleService
+import com.tencent.devops.store.constant.StoreConstants.MB_UNIT
 import com.tencent.devops.store.pojo.common.StorePackageInfoReq
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.pojo.common.version.StoreVersionSizeInfo
@@ -199,7 +200,7 @@ class StoreDevxPkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSer
             storeType = StoreTypeEnum.DEVX.name,
             version = version,
             packageSize = size,
-            unit = "MB"
+            unit = MB_UNIT
         )
     }
 }

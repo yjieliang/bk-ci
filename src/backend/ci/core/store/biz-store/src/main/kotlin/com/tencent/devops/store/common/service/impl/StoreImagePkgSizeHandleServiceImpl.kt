@@ -1,14 +1,15 @@
 package com.tencent.devops.store.common.service.impl
 
 import com.tencent.devops.store.common.service.AbstractStoreComponentPkgSizeHandleService
+import com.tencent.devops.store.constant.StoreConstants.MB_UNIT
 import com.tencent.devops.store.image.dao.ImageCommonDao
 import com.tencent.devops.store.pojo.common.StorePackageInfoReq
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.pojo.common.version.StoreVersionSizeInfo
+import java.math.BigDecimal
 import org.jooq.DSLContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import java.math.BigDecimal
 
 @Service("IMAGE_PKG_SIZE_HANDLE_SERVICE")
 class StoreImagePkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleService() {
@@ -49,7 +50,7 @@ class StoreImagePkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSe
             storeType = StoreTypeEnum.IMAGE.name,
             version = version,
             packageSize = size,
-            unit = "MB"
+            unit = MB_UNIT
         )
     }
 }

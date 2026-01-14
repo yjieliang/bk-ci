@@ -8,6 +8,7 @@ import com.tencent.devops.common.redis.RedisLock
 import com.tencent.devops.common.redis.RedisOperation
 import com.tencent.devops.store.atom.dao.AtomCommonDao
 import com.tencent.devops.store.common.service.AbstractStoreComponentPkgSizeHandleService
+import com.tencent.devops.store.constant.StoreConstants.MB_UNIT
 import com.tencent.devops.store.pojo.atom.enums.AtomStatusEnum
 import com.tencent.devops.store.pojo.common.StorePackageInfoReq
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
@@ -34,7 +35,6 @@ class StoreAtomPkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSer
 
     companion object {
         private val logger = LoggerFactory.getLogger(StoreAtomPkgSizeHandleServiceImpl::class.java)
-        private const val UNIT = "MB"
     }
 
     override fun batchUpdateComponentsVersionSize() {
@@ -166,7 +166,7 @@ class StoreAtomPkgSizeHandleServiceImpl : AbstractStoreComponentPkgSizeHandleSer
             storeType = StoreTypeEnum.ATOM.name,
             version = version,
             packageSize = size,
-            unit = UNIT
+            unit = MB_UNIT
         )
     }
 }

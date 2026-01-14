@@ -45,7 +45,6 @@ class ArchiveThreadPoolConfig {
             setWaitForTasksToCompleteOnShutdown(true)
             setAwaitTerminationSeconds(30)
             setRejectedExecutionHandler(ThreadPoolExecutor.CallerRunsPolicy())
-            initialize()
         }
     }
 }
