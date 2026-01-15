@@ -370,7 +370,7 @@ interface UserStoreComponentQueryResource {
         page: Int,
         @Parameter(description = "每页数量", required = true)
         @QueryParam("pageSize")
-        @DefaultValue("10")
+        @BkField(patternStyle = BkStyleEnum.PAGE_SIZE_STYLE)
         pageSize: Int
     ): Result<Page<StoreVersionLogInfo>>
 

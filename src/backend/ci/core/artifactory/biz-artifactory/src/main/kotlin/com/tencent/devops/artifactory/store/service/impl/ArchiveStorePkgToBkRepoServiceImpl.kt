@@ -15,9 +15,9 @@ import com.tencent.devops.store.pojo.common.CONFIG_YML_NAME
 import com.tencent.devops.store.pojo.common.enums.StoreTypeEnum
 import com.tencent.devops.store.pojo.common.publication.StorePkgEnvInfo
 import jakarta.ws.rs.NotFoundException
+import java.io.File
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
-import java.io.File
 
 abstract class ArchiveStorePkgToBkRepoServiceImpl : ArchiveStorePkgServiceImpl() {
 
@@ -247,7 +247,7 @@ abstract class ArchiveStorePkgToBkRepoServiceImpl : ArchiveStorePkgServiceImpl()
             logger.warn("Error getting store file size - filePath: $filePath, storeType: $storeType", ignored)
             null
         } catch (ignored: Exception) {
-            logger.error("Error getting store file size - filePath: $filePath, storeType: $storeType", ignored)
+            logger.warn("Error getting store file size - filePath: $filePath, storeType: $storeType", ignored)
             null
         }
     }
