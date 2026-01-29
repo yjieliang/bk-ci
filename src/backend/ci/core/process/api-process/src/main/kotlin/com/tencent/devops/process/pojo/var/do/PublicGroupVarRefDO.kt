@@ -31,7 +31,7 @@ import com.tencent.devops.common.pipeline.enums.PublicVerGroupReferenceTypeEnum
 import io.swagger.v3.oas.annotations.media.Schema
 import java.time.LocalDateTime
 
-@Schema(title = "流水线公共变量引用信息")
+@Schema(title = "公共变量组引用资源信息")
 data class PublicGroupVarRefDO(
     @get:Schema(title = "引用ID")
     val referId: String,

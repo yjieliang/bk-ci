@@ -183,7 +183,7 @@ class ModelTransfer @Autowired constructor(
             pipelineCreator = yamlInput.pipelineInfo?.creator ?: yamlInput.userId
         )
         model.latestVersion = yamlInput.pipelineInfo?.version ?: 0
-        model.publicVarGroups = yamlInput.yaml.formatVariableTemplates().filter { !it.version.isNullOrBlank() }.map {
+        model.publicVarGroups = yamlInput.yaml.formatVariableTemplates().map {
             PublicVarGroupRef(groupName = it.name, versionName = it.version)
         }
 

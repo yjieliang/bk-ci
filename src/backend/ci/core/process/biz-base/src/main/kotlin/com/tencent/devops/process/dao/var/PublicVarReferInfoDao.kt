@@ -203,38 +203,6 @@ class PublicVarReferInfoDao {
     }
 
     /**
-     * 计算指定引用的实际变量数量
-     * @param dslContext 数据库上下文
-     * @param projectId 项目ID
-     * @param referId 引用ID
-     * @param referType 引用类型
-     * @param referVersion 引用版本号
-     * @return 实际变量引用数量
-     */
-    fun countActualVarReferencesByReferId(
-        dslContext: DSLContext,
-        projectId: String,
-        referId: String,
-        referType: PublicVerGroupReferenceTypeEnum,
-        referVersion: Int? = null
-    ): Int {
-        with(TResourcePublicVarReferInfo.T_RESOURCE_PUBLIC_VAR_REFER_INFO) {
-            val conditions = mutableListOf(
-                PROJECT_ID.eq(projectId),
-                REFER_ID.eq(referId),
-                REFER_TYPE.eq(referType.name)
-            )
-            if (referVersion != null) {
-                conditions.add(REFER_VERSION.eq(referVersion))
-            }
-            return dslContext.selectCount()
-                .from(this)
-                .where(conditions)
-                .fetchOne(0, Int::class.java) ?: 0
-        }
-    }
-
-    /**
      * 根据引用ID、变量组和变量名列表删除引用记录
      * @param dslContext 数据库上下文
      * @param projectId 项目ID
@@ -358,46 +326,6 @@ class PublicVarReferInfoDao {
     }
 
     /**
-     * 根据变量名查询引用该变量的资源ID列表（每个referId只返回最大版本）
-     * 查询逻辑：使用 GROUP BY 和 MAX 聚合函数获取每个 referId 的最大 referVersion
-     * @param dslContext 数据库上下文
-     * @param projectId 项目ID
-     * @param groupName 变量组名
-     * @param varName 变量名
-     * @param version 变量组版本
-     * @param referType 引用类型（可选）
-     * @return 引用ID列表（每个referId只返回最大版本的记录）
-     */
-    fun listReferIdsByVarName(
-        dslContext: DSLContext,
-        projectId: String,
-        groupName: String,
-        varName: String,
-        version: Int? = null,
-        referType: PublicVerGroupReferenceTypeEnum?
-    ): List<String> {
-        with(TResourcePublicVarReferInfo.T_RESOURCE_PUBLIC_VAR_REFER_INFO) {
-            val conditions = mutableListOf(
-                PROJECT_ID.eq(projectId),
-                GROUP_NAME.eq(groupName),
-                VAR_NAME.eq(varName)
-            )
-            version?.let { conditions.add(VERSION.eq(it)) }
-            referType?.let { conditions.add(REFER_TYPE.eq(it.name)) }
-
-            // Use GROUP BY and MAX to get only the latest version for each referId
-            // This ensures when a variable is referenced by multiple versions of the same referId,
-            // only the maximum referVersion is returned
-            return dslContext.select(REFER_ID)
-                .from(this)
-                .where(conditions)
-                .groupBy(REFER_ID)
-                .fetch()
-                .map { it.value1() }
-        }
-    }
-
-    /**
      * 统计指定变量的不同 referId 数量（跨版本去重）
      * 计数原则：referId + varName 的唯一组合计数为1，跨版本去重
      * @param dslContext 数据库上下文
@@ -422,6 +350,182 @@ class PublicVarReferInfoDao {
                 .and(VERSION.eq(version))
                 .and(VAR_NAME.eq(varName))
                 .fetchOne(0, Int::class.java) ?: 0
+        }
+    }
+
+    /**
+     * 根据变量名和版本列表查询引用该变量的资源ID列表（去重）
+     * @param dslContext 数据库上下文
+     * @param projectId 项目ID
+     * @param groupName 变量组名
+     * @param varName 变量名
+     * @param versions 变量组版本列表
+     * @param referType 引用类型（可选）
+     * @return 引用ID列表（去重）
+     */
+    fun listReferIdsByVarNameAndVersions(
+        dslContext: DSLContext,
+        projectId: String,
+        groupName: String,
+        varName: String,
+        versions: List<Int>,
+        referType: PublicVerGroupReferenceTypeEnum?
+    ): List<String> {
+        if (versions.isEmpty()) {
+            return emptyList()
+        }
+
+        with(TResourcePublicVarReferInfo.T_RESOURCE_PUBLIC_VAR_REFER_INFO) {
+            val conditions = mutableListOf(
+                PROJECT_ID.eq(projectId),
+                GROUP_NAME.eq(groupName),
+                VAR_NAME.eq(varName),
+                VERSION.`in`(versions)
+            )
+            referType?.let { conditions.add(REFER_TYPE.eq(it.name)) }
+
+            return dslContext.selectDistinct(REFER_ID)
+                .from(this)
+                .where(conditions)
+                .fetch()
+                .map { it.value1() }
+        }
+    }
+
+    /**
+     * 查询指定变量和版本下已存在引用的 referId 集合
+     * 用于判断是否需要增加引用计数
+     * @param dslContext 数据库上下文
+     * @param projectId 项目ID（引用记录所在的项目）
+     * @param groupName 变量组名
+     * @param varName 变量名
+     * @param version 变量组版本
+     * @param referIds 待检查的引用ID列表
+     * @return 已存在引用的 referId 集合
+     */
+    fun listExistingReferIdsByVarAndVersion(
+        dslContext: DSLContext,
+        projectId: String,
+        groupName: String,
+        varName: String,
+        version: Int,
+        referIds: List<String>
+    ): Set<String> {
+        if (referIds.isEmpty()) {
+            return emptySet()
+        }
+
+        with(TResourcePublicVarReferInfo.T_RESOURCE_PUBLIC_VAR_REFER_INFO) {
+            return dslContext.selectDistinct(REFER_ID)
+                .from(this)
+                .where(PROJECT_ID.eq(projectId))
+                .and(GROUP_NAME.eq(groupName))
+                .and(VAR_NAME.eq(varName))
+                .and(VERSION.eq(version))
+                .and(REFER_ID.`in`(referIds))
+                .fetch()
+                .mapNotNull { it.value1() }
+                .toSet()
+        }
+    }
+
+    /**
+     * 批量统计多个变量的引用数量（按 referId 去重）
+     * 用于查询变量列表时显示实际引用该变量的资源数量
+     * @param dslContext 数据库上下文
+     * @param projectId 项目ID
+     * @param groupName 变量组名
+     * @param version 变量组版本
+     * @param varNames 变量名列表
+     * @return Map<String, Int> 变量名到引用数量的映射
+     */
+    fun batchCountDistinctReferIdsByVars(
+        dslContext: DSLContext,
+        projectId: String,
+        groupName: String,
+        version: Int,
+        varNames: List<String>
+    ): Map<String, Int> {
+        if (varNames.isEmpty()) {
+            return emptyMap()
+        }
+
+        with(TResourcePublicVarReferInfo.T_RESOURCE_PUBLIC_VAR_REFER_INFO) {
+            return dslContext.select(VAR_NAME, DSL.countDistinct(REFER_ID))
+                .from(this)
+                .where(PROJECT_ID.eq(projectId))
+                .and(GROUP_NAME.eq(groupName))
+                .and(VERSION.eq(version))
+                .and(VAR_NAME.`in`(varNames))
+                .groupBy(VAR_NAME)
+                .fetch()
+                .associate { record ->
+                    record.getValue(VAR_NAME) to (record.getValue(1, Int::class.java) ?: 0)
+                }
+        }
+    }
+
+    /**
+     * 统计每个 referId 引用某变量组的变量数量
+     * @param dslContext 数据库上下文
+     * @param projectId 项目ID
+     * @param groupName 变量组名
+     * @param referIds 引用ID列表
+     * @return Map<referId, count> 每个资源引用的变量数量
+     */
+    fun countVarReferByGroupAndReferIds(
+        dslContext: DSLContext,
+        projectId: String,
+        groupName: String,
+        referIds: List<String>
+    ): Map<String, Int> {
+        if (referIds.isEmpty()) {
+            return emptyMap()
+        }
+
+        with(TResourcePublicVarReferInfo.T_RESOURCE_PUBLIC_VAR_REFER_INFO) {
+            return dslContext.select(REFER_ID, DSL.countDistinct(VAR_NAME))
+                .from(this)
+                .where(PROJECT_ID.eq(projectId))
+                .and(GROUP_NAME.eq(groupName))
+                .and(REFER_ID.`in`(referIds))
+                .groupBy(REFER_ID)
+                .fetch()
+                .associate { record ->
+                    record.getValue(REFER_ID) to (record.getValue(1, Int::class.java) ?: 0)
+                }
+        }
+    }
+
+    /**
+     * 查询指定变量组下有实际变量引用的不同 referId 列表
+     * @param dslContext 数据库上下文
+     * @param projectId 项目ID
+     * @param groupName 变量组名
+     * @param referType 引用类型（可选）
+     * @param varName 变量名（可选）
+     * @return 有实际变量引用的 referId 列表
+     */
+    fun listReferIdsWithActualVarRefer(
+        dslContext: DSLContext,
+        projectId: String,
+        groupName: String,
+        referType: PublicVerGroupReferenceTypeEnum? = null,
+        varName: String? = null
+    ): List<String> {
+        with(TResourcePublicVarReferInfo.T_RESOURCE_PUBLIC_VAR_REFER_INFO) {
+            val conditions = mutableListOf(
+                PROJECT_ID.eq(projectId),
+                GROUP_NAME.eq(groupName)
+            )
+            referType?.let { conditions.add(REFER_TYPE.eq(it.name)) }
+            varName?.let { conditions.add(VAR_NAME.eq(it)) }
+
+            return dslContext.selectDistinct(REFER_ID)
+                .from(this)
+                .where(conditions)
+                .fetch()
+                .map { it.value1() }
         }
     }
 }

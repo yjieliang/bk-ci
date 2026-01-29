@@ -27,8 +27,8 @@
 
 package com.tencent.devops.process.dao.`var`
 
-import com.tencent.devops.model.process.tables.TPipelinePublicVarVersionSummary
-import com.tencent.devops.model.process.tables.records.TPipelinePublicVarVersionSummaryRecord
+import com.tencent.devops.model.process.tables.TResourcePublicVarVersionSummary
+import com.tencent.devops.model.process.tables.records.TResourcePublicVarVersionSummaryRecord
 import com.tencent.devops.process.pojo.`var`.po.PublicVarVersionSummaryPO
 import java.time.LocalDateTime
 import org.jooq.DSLContext
@@ -37,7 +37,7 @@ import org.springframework.stereotype.Repository
 @Repository
 class PublicVarVersionSummaryDao {
 
-    private fun mapRecordToPO(record: TPipelinePublicVarVersionSummaryRecord): PublicVarVersionSummaryPO {
+    private fun mapRecordToPO(record: TResourcePublicVarVersionSummaryRecord): PublicVarVersionSummaryPO {
         return PublicVarVersionSummaryPO(
             id = record.id,
             projectId = record.projectId,
@@ -59,7 +59,7 @@ class PublicVarVersionSummaryDao {
         dslContext: DSLContext,
         po: PublicVarVersionSummaryPO
     ) {
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             dslContext.insertInto(this)
                 .set(ID, po.id)
                 .set(PROJECT_ID, po.projectId)
@@ -89,7 +89,7 @@ class PublicVarVersionSummaryDao {
         varName: String,
         version: Int
     ): PublicVarVersionSummaryPO? {
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             return dslContext.selectFrom(this)
                 .where(PROJECT_ID.eq(projectId))
                 .and(GROUP_NAME.eq(groupName))
@@ -108,7 +108,7 @@ class PublicVarVersionSummaryDao {
         groupName: String,
         varName: String
     ): Int {
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             return dslContext.select(REFER_COUNT.sum())
                 .from(this)
                 .where(PROJECT_ID.eq(projectId))
@@ -130,7 +130,7 @@ class PublicVarVersionSummaryDao {
         referCount: Int,
         modifier: String
     ) {
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             dslContext.update(this)
                 .set(REFER_COUNT, referCount)
                 .set(MODIFIER, modifier)
@@ -155,7 +155,7 @@ class PublicVarVersionSummaryDao {
         countChange: Int,
         modifier: String
     ): Int {
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             val condition = PROJECT_ID.eq(projectId)
                 .and(GROUP_NAME.eq(groupName))
                 .and(VAR_NAME.eq(varName))
@@ -188,7 +188,7 @@ class PublicVarVersionSummaryDao {
     ): Map<String, Int> {
         if (varNames.isEmpty()) return emptyMap()
 
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             return dslContext.select(VAR_NAME, REFER_COUNT.sum())
                 .from(this)
                 .where(PROJECT_ID.eq(projectId))
@@ -220,7 +220,7 @@ class PublicVarVersionSummaryDao {
     ): Map<String, Int> {
         if (varNames.isEmpty()) return emptyMap()
 
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             return dslContext.select(VAR_NAME, REFER_COUNT)
                 .from(this)
                 .where(PROJECT_ID.eq(projectId))
@@ -243,7 +243,7 @@ class PublicVarVersionSummaryDao {
         groupName: String,
         varName: String
     ) {
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             dslContext.deleteFrom(this)
                 .where(PROJECT_ID.eq(projectId))
                 .and(GROUP_NAME.eq(groupName))
@@ -260,7 +260,7 @@ class PublicVarVersionSummaryDao {
         projectId: String,
         groupName: String
     ) {
-        with(TPipelinePublicVarVersionSummary.T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY) {
+        with(TResourcePublicVarVersionSummary.T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY) {
             dslContext.deleteFrom(this)
                 .where(PROJECT_ID.eq(projectId))
                 .and(GROUP_NAME.eq(groupName))

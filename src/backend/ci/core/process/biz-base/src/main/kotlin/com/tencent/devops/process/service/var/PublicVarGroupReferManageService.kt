@@ -32,6 +32,7 @@ import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.util.JsonUtil
 import com.tencent.devops.common.client.Client
 import com.tencent.devops.common.event.dispatcher.SampleEventDispatcher
+import com.tencent.devops.common.pipeline.Model
 import com.tencent.devops.common.pipeline.enums.PublicVerGroupReferenceTypeEnum
 import com.tencent.devops.common.pipeline.pojo.BuildFormProperty
 import com.tencent.devops.common.pipeline.pojo.PublicVarGroupRef
@@ -55,11 +56,11 @@ import com.tencent.devops.process.pojo.`var`.enums.PublicVarTypeEnum
 import com.tencent.devops.process.pojo.`var`.po.PublicVarPositionPO
 import com.tencent.devops.process.pojo.`var`.po.ResourcePublicVarGroupReferPO
 import com.tencent.devops.project.api.service.ServiceAllocIdResource
+import java.time.LocalDateTime
 import org.jooq.DSLContext
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
 
 @Service
 class PublicVarGroupReferManageService @Autowired constructor(
@@ -262,100 +263,50 @@ class PublicVarGroupReferManageService @Autowired constructor(
     ) {
         val model = publicVarGroupReferDTO.model
         val params = model.getTriggerContainer().params
+        logger.info("handleVarGroupReferBus params: $params")
         if (params.isEmpty()) {
             return
         }
         // 检查参数ID是否存在重复
         validateParamIds(params)
-        
-        // 判断是否为跨项目场景
-        val referHasSource = publicVarGroupReferDTO.referHasSource
-        
-        if (referHasSource) {
-            // 跨项目场景：展开变量组，不保存引用记录
-            logger.info(
-                "Cross-project scenario detected: projectId=${publicVarGroupReferDTO.projectId}, " +
-                "referId=${publicVarGroupReferDTO.referId}, referType=${publicVarGroupReferDTO.referType}"
-            )
-            
-            // 获取源头项目ID
-            val sourceProjectId = getSourceProjectId(
-                projectId = publicVarGroupReferDTO.projectId,
-                referId = publicVarGroupReferDTO.referId,
-                referType = publicVarGroupReferDTO.referType,
-                referHasSource = referHasSource
-            )
-            
-            logger.info("Source project ID: $sourceProjectId")
-            
-            // 使用分布式锁保护操作（虽然不保存引用记录，但仍需要保护并发操作）
-            val lock = createReferLock(
+
+        // 使用版本级别的分布式锁保护整个操作流程，避免并发修改导致的引用计数错误
+        val lock = createReferLock(
+            projectId = publicVarGroupReferDTO.projectId,
+            referId = publicVarGroupReferDTO.referId,
+            referType = publicVarGroupReferDTO.referType,
+            referVersion = publicVarGroupReferDTO.referVersion
+        )
+        lock.lock()
+        try {
+            // 查询历史引用记录（在锁保护下查询，确保数据一致性）
+            val historicalReferInfos = publicVarGroupReferInfoDao.listVarGroupReferInfoByReferId(
+                dslContext = dslContext,
                 projectId = publicVarGroupReferDTO.projectId,
                 referId = publicVarGroupReferDTO.referId,
                 referType = publicVarGroupReferDTO.referType,
                 referVersion = publicVarGroupReferDTO.referVersion
             )
-            lock.lock()
-            try {
-                model.handlePublicVarInfo()
-                val publicVarGroups = model.publicVarGroups
-                logger.info("handleVarGroupReferBus publicVarGroups: $publicVarGroups")
-                
-                // 验证变量组在源项目中是否存在
-                publicVarGroups?.let { validatePublicVarGroupsExist(sourceProjectId, it) }
-                
-                // 展开跨项目变量组
-                expandCrossProjectVarGroups(
-                    publicVarGroupReferDTO = publicVarGroupReferDTO,
-                    params = params,
-                    sourceProjectId = sourceProjectId
-                )
-                
-                logger.info("Cross-project var groups expanded, skip saving reference records")
-            } finally {
-                lock.unlock()
-            }
-        } else {
-            // 非跨项目场景：保持原有逻辑
-            // 使用版本级别的分布式锁保护整个操作流程，避免并发修改导致的引用计数错误
-            val lock = createReferLock(
-                projectId = publicVarGroupReferDTO.projectId,
-                referId = publicVarGroupReferDTO.referId,
-                referType = publicVarGroupReferDTO.referType,
-                referVersion = publicVarGroupReferDTO.referVersion
+            model.handlePublicVarInfo()
+            val publicVarGroups = model.publicVarGroups
+            logger.info("handleVarGroupReferBus publicVarGroups: $publicVarGroups")
+            publicVarGroups?.let { validatePublicVarGroupsExist(publicVarGroupReferDTO.projectId, it) }
+            // 提取并处理动态变量组
+            val pipelinePublicVarGroupReferPOs = processDynamicVarGroups(
+                publicVarGroupReferDTO = publicVarGroupReferDTO,
+                params = params
             )
-            lock.lock()
-            try {
-                // 查询历史引用记录（在锁保护下查询，确保数据一致性）
-                val historicalReferInfos = publicVarGroupReferInfoDao.listVarGroupReferInfoByReferId(
-                    dslContext = dslContext,
-                    projectId = publicVarGroupReferDTO.projectId,
-                    referId = publicVarGroupReferDTO.referId,
-                    referType = publicVarGroupReferDTO.referType,
-                    referVersion = publicVarGroupReferDTO.referVersion
-                )
-                model.handlePublicVarInfo()
-                val publicVarGroups = model.publicVarGroups
-                logger.info("handleVarGroupReferBus publicVarGroups: $publicVarGroups")
-                publicVarGroups?.let { validatePublicVarGroupsExist(publicVarGroupReferDTO.projectId, it) }
-                // 提取并处理动态变量组
-                val pipelinePublicVarGroupReferPOs = processDynamicVarGroups(
-                    publicVarGroupReferDTO = publicVarGroupReferDTO,
-                    params = params
-                )
-                // 更新引用计数和批量保存（在锁保护下执行，确保原子性）
-                updateReferenceCountsAfterSave(
-                    projectId = publicVarGroupReferDTO.projectId,
-                    historicalReferInfos = historicalReferInfos,
-                    publicVarGroupNames = publicVarGroups?.map { it.groupName } ?: emptyList(),
-                    resourcePublicVarGroupReferPOS = pipelinePublicVarGroupReferPOs
-                )
-                logger.info("updateReferenceCountsAfterSave Success")
-            } finally {
-                lock.unlock()
-            }
+            // 更新引用计数和批量保存（在锁保护下执行，确保原子性）
+            updateReferenceCountsAfterSave(
+                projectId = publicVarGroupReferDTO.projectId,
+                historicalReferInfos = historicalReferInfos,
+                publicVarGroupNames = publicVarGroups?.map { it.groupName } ?: emptyList(),
+                resourcePublicVarGroupReferPOS = pipelinePublicVarGroupReferPOs
+            )
+            logger.info("updateReferenceCountsAfterSave Success")
+        } finally {
+            lock.unlock()
         }
-        
         // 发送事件（在锁外执行，避免阻塞其他操作）
         sampleEventDispatcher.dispatch(
             ModelVarReferenceEvent(
@@ -366,6 +317,160 @@ class PublicVarGroupReferManageService @Autowired constructor(
                 resourceVersion = publicVarGroupReferDTO.referVersion,
                 resourceVersionName = publicVarGroupReferDTO.referVersionName
             )
+        )
+    }
+
+    /**
+     * 处理跨项目变量组引用，更新model中的参数
+     * 展开变量组中的变量到params，清除引用信息，清除publicVarGroups
+     */
+    fun handleCrossProjectVarGroup(
+        projectId: String,
+        referId: String,
+        referType: PublicVerGroupReferenceTypeEnum,
+        referVersion: Int,
+        model: Model
+    ) {
+        val params = model.getTriggerContainer().params
+        logger.info(
+            "handleCrossProjectVarGroup: projectId=$projectId, referId=$referId, " +
+            "referType=$referType, referVersion=$referVersion"
+        )
+        
+        if (params.isEmpty()) {
+            return
+        }
+        
+        // 获取源头项目ID
+        val sourceProjectId = getSourceProjectId(
+            projectId = projectId,
+            referId = referId,
+            referType = referType,
+            referHasSource = true
+        )
+        
+        logger.info("Source project ID: $sourceProjectId")
+        
+        // 使用分布式锁保护操作
+        val lock = createReferLock(
+            projectId = projectId,
+            referId = referId,
+            referType = referType,
+            referVersion = referVersion
+        )
+        lock.lock()
+        try {
+            model.handlePublicVarInfo()
+            val publicVarGroups = model.publicVarGroups
+            logger.info("handleCrossProjectVarGroup publicVarGroups: $publicVarGroups")
+            
+            // 验证变量组在源项目中是否存在
+            publicVarGroups?.let { validatePublicVarGroupsExist(sourceProjectId, it) }
+            
+            // 展开跨项目变量组
+            expandCrossProjectVarGroupsInternal(
+                params = params,
+                model = model,
+                sourceProjectId = sourceProjectId
+            )
+            logger.info("handleCrossProjectVarGroup params after expand: $params")
+            logger.info("Cross-project var groups expanded, skip saving reference records")
+        } finally {
+            lock.unlock()
+        }
+    }
+
+    /**
+     * 展开跨项目变量组（内部方法）
+     * 将公共变量组的变量展开为普通变量
+     */
+    private fun expandCrossProjectVarGroupsInternal(
+        params: MutableList<BuildFormProperty>,
+        model: Model,
+        sourceProjectId: String
+    ) {
+        val publicVarGroups = model.publicVarGroups
+
+        if (publicVarGroups.isNullOrEmpty()) {
+            logger.info("No public var groups to expand for cross-project scenario")
+            return
+        }
+
+        logger.info(
+            "Expanding cross-project var groups: sourceProjectId=$sourceProjectId, " +
+            "groupCount=${publicVarGroups.size}"
+        )
+
+        // 收集所有需要移除的占位符索引和需要添加的变量
+        val indicesToRemove = mutableListOf<Int>()
+        val varsToAdd = mutableListOf<BuildFormProperty>()
+
+        // 遍历每个变量组
+        publicVarGroups.forEach { publicVarGroup ->
+            val groupName = publicVarGroup.groupName
+            val versionName = publicVarGroup.versionName
+            val version = publicVarGroup.version
+
+            // 使用源项目ID查询变量组信息
+            val varGroupRecord = publicVarGroupDao.getRecordByGroupName(
+                dslContext = dslContext,
+                projectId = sourceProjectId,
+                groupName = groupName,
+                version = version,
+                versionName = versionName
+            ) ?: throw ErrorCodeException(
+                errorCode = ERROR_PIPELINE_COMMON_VAR_GROUP_NOT_EXIST,
+                params = arrayOf(groupName)
+            )
+
+            // 使用源项目ID查询变量组中的变量
+            val groupVars = publicVarDao.listVarByGroupName(
+                dslContext = dslContext,
+                projectId = sourceProjectId,
+                groupName = groupName,
+                version = varGroupRecord.version
+            )
+
+            logger.info(
+                "Expanding var group: groupName=$groupName, version=${varGroupRecord.version}, " +
+                "varCount=${groupVars.size}"
+            )
+
+            // 找出params中属于该变量组的占位符
+            params.forEachIndexed { index, param ->
+                if (param.varGroupName == groupName) {
+                    indicesToRemove.add(index)
+                }
+            }
+
+            // 将变量组的变量转换为BuildFormProperty并添加到待添加列表
+            // 在添加前清除公共变量组引用信息，因为跨项目场景不保存引用记录
+            groupVars.forEach { varPO ->
+                val buildFormProperty = JsonUtil.to(varPO.buildFormProperty, BuildFormProperty::class.java)
+                // 清除公共变量组引用信息
+                buildFormProperty.varGroupName = null
+                buildFormProperty.varGroupVersion = null
+                varsToAdd.add(buildFormProperty)
+            }
+            logger.info("expandCrossProjectVarGroupsInternal varsToAdd: $varsToAdd")
+        }
+
+        // 按降序移除占位符（避免索引偏移问题）
+        indicesToRemove.distinct().sortedDescending().forEach { index ->
+            if (index < params.size) {
+                params.removeAt(index)
+            }
+        }
+
+        // 将展开的变量添加到params列表
+        params.addAll(varsToAdd)
+
+        // 清除model中的公共变量组信息
+        model.publicVarGroups = null
+
+        logger.info(
+            "Cross-project var groups expanded: removed ${indicesToRemove.size} placeholders, " +
+            "added ${varsToAdd.size} vars"
         )
     }
 
@@ -621,103 +726,6 @@ class PublicVarGroupReferManageService @Autowired constructor(
     }
 
     /**
-     * 展开跨项目变量组
-     * 当referHasSource为true时，将公共变量组的变量展开为普通变量
-     * 
-     * @param publicVarGroupReferDTO 变量组引用DTO
-     * @param params 参数列表
-     * @param sourceProjectId 源项目ID
-     */
-    private fun expandCrossProjectVarGroups(
-        publicVarGroupReferDTO: PublicVarGroupReferDTO,
-        params: MutableList<BuildFormProperty>,
-        sourceProjectId: String
-    ) {
-        val model = publicVarGroupReferDTO.model
-        val publicVarGroups = model.publicVarGroups
-
-        if (publicVarGroups.isNullOrEmpty()) {
-            logger.info("No public var groups to expand for cross-project scenario")
-            return
-        }
-
-        logger.info(
-            "Expanding cross-project var groups: sourceProjectId=$sourceProjectId, " +
-            "groupCount=${publicVarGroups.size}"
-        )
-
-        // 收集所有需要移除的占位符索引和需要添加的变量
-        val indicesToRemove = mutableListOf<Int>()
-        val varsToAdd = mutableListOf<BuildFormProperty>()
-
-        // 遍历每个变量组
-        publicVarGroups.forEach { publicVarGroup ->
-            val groupName = publicVarGroup.groupName
-            val versionName = publicVarGroup.versionName
-            val version = publicVarGroup.version
-
-            // 使用源项目ID查询变量组信息
-            val varGroupRecord = publicVarGroupDao.getRecordByGroupName(
-                dslContext = dslContext,
-                projectId = sourceProjectId,
-                groupName = groupName,
-                version = version,
-                versionName = versionName
-            ) ?: throw ErrorCodeException(
-                errorCode = ERROR_PIPELINE_COMMON_VAR_GROUP_NOT_EXIST,
-                params = arrayOf(groupName)
-            )
-
-            // 使用源项目ID查询变量组中的变量
-            val groupVars = publicVarDao.listVarByGroupName(
-                dslContext = dslContext,
-                projectId = sourceProjectId,
-                groupName = groupName,
-                version = varGroupRecord.version
-            )
-
-            logger.info(
-                "Expanding var group: groupName=$groupName, version=${varGroupRecord.version}, " +
-                "varCount=${groupVars.size}"
-            )
-
-            // 找出params中属于该变量组的占位符
-            params.forEachIndexed { index, param ->
-                if (param.varGroupName == groupName) {
-                    indicesToRemove.add(index)
-                }
-            }
-
-            // 将变量组的变量转换为BuildFormProperty并添加到待添加列表
-            groupVars.forEach { varPO ->
-                val buildFormProperty = JsonUtil.to(varPO.buildFormProperty, BuildFormProperty::class.java)
-                // 清除公共变量组引用信息
-                buildFormProperty.varGroupName = null
-                buildFormProperty.varGroupVersion = null
-                varsToAdd.add(buildFormProperty)
-            }
-        }
-
-        // 按降序移除占位符（避免索引偏移问题）
-        indicesToRemove.distinct().sortedDescending().forEach { index ->
-            if (index < params.size) {
-                params.removeAt(index)
-            }
-        }
-
-        // 将展开的变量添加到params列表
-        params.addAll(varsToAdd)
-
-        // 清除model中的公共变量组引用信息
-        model.publicVarGroups = null
-
-        logger.info(
-            "Cross-project var groups expanded: removed ${indicesToRemove.size} placeholders, " +
-            "added ${varsToAdd.size} vars"
-        )
-    }
-
-    /**
      * 删除指定版本的变量组引用与变量引用记录
      * 使用版本级别的分布式锁保护，确保删除操作的原子性，避免并发修改导致的引用计数错误
      * 优化：使用版本级别的锁而不是引用级别的锁，提升并发性能
@@ -783,7 +791,7 @@ class PublicVarGroupReferManageService @Autowired constructor(
         }
 
         val params = model.getTriggerContainer().params
-
+        logger.info("handleVarGroupReferByVersionName params: $params")
         // 查出params中已存在的变量组名称
         val existingGroupNames = params
             .mapNotNull { it.varGroupName }
@@ -793,22 +801,18 @@ class PublicVarGroupReferManageService @Autowired constructor(
         val groupsToAdd = publicVarGroups.filter { publicVarGroup ->
             !existingGroupNames.contains(publicVarGroup.groupName)
         }
-
-        if (groupsToAdd.isEmpty()) {
-            handleVarGroupReferBus(publicVarGroupReferDTO)
-            return
-        }
-
-        // 查询这些变量组的变量并添加到params末尾
-        groupsToAdd.forEach { publicVarGroup ->
-            addVarGroupToParams(
-                publicVarGroupReferDTO = publicVarGroupReferDTO,
-                publicVarGroup = publicVarGroup,
-                params = params
-            )
-        }
-
         handleVarGroupReferBus(publicVarGroupReferDTO)
+        if (groupsToAdd.isNotEmpty()) {
+            // 查询这些变量组的变量并添加到params末尾
+            groupsToAdd.forEach { publicVarGroup ->
+                addVarGroupToParams(
+                    publicVarGroupReferDTO = publicVarGroupReferDTO,
+                    publicVarGroup = publicVarGroup,
+                    params = params
+                )
+            }
+        }
+        logger.info("handleVarGroupReferByVersionName end params: $params")
     }
 
     /**
@@ -818,11 +822,11 @@ class PublicVarGroupReferManageService @Autowired constructor(
         publicVarGroupReferDTO: PublicVarGroupReferDTO,
         publicVarGroup: PublicVarGroupRef,
         params: MutableList<BuildFormProperty>
-    ) {
+    ): MutableList<BuildFormProperty> {
         val groupName = publicVarGroup.groupName
         val versionName = publicVarGroup.versionName
         val version = publicVarGroup.version
-
+        logger.info("addVarGroupToParams groupName: $groupName, versionName: $versionName, version: $version")
         // 使用当前项目ID查询变量组信息
         val varGroupRecord = publicVarGroupDao.getRecordByGroupName(
             dslContext = dslContext,
@@ -842,7 +846,7 @@ class PublicVarGroupReferManageService @Autowired constructor(
             groupName = groupName,
             version = varGroupRecord.version
         )
-
+        logger.info("addVarGroupToParams groupVars: $groupVars")
         // 将变量添加到params
         groupVars.forEach { varPO ->
             val buildFormProperty = JsonUtil.to(varPO.buildFormProperty, BuildFormProperty::class.java)
@@ -850,5 +854,6 @@ class PublicVarGroupReferManageService @Autowired constructor(
             buildFormProperty.varGroupVersion = if (varPO.version != -1) version else null
             params.add(buildFormProperty)
         }
+        return params
     }
 }

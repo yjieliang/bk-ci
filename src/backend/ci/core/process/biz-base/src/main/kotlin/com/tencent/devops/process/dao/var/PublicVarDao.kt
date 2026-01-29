@@ -29,9 +29,9 @@ package com.tencent.devops.process.dao.`var`
 
 import com.tencent.devops.common.pipeline.enums.BuildFormPropertyType
 import com.tencent.devops.model.process.tables.TResourcePublicVar
+import com.tencent.devops.model.process.tables.TResourcePublicVarGroup
 import com.tencent.devops.process.pojo.`var`.enums.PublicVarTypeEnum
 import com.tencent.devops.process.pojo.`var`.po.PublicVarPO
-import java.time.LocalDateTime
 import org.jooq.DSLContext
 import org.springframework.stereotype.Repository
 
@@ -145,7 +145,7 @@ class PublicVarDao {
      * @param dslContext 数据库上下文
      * @param projectId 项目ID
      * @param groupName 变量组名
-     * @param version 版本号
+     * @param version 版本号，-1表示查询最新版本
      * @param varNameList 变量名列表（可选，用于过滤特定变量）
      * @return 公共变量PO列表
      */
@@ -156,11 +156,24 @@ class PublicVarDao {
         version: Int,
         varNameList: List<String>? = null
     ): List<PublicVarPO> {
+        // 当 version == -1 时，查询变量组最新版本
+        val actualVersion = if (version == -1) {
+            val varGroup = TResourcePublicVarGroup.T_RESOURCE_PUBLIC_VAR_GROUP
+            dslContext.select(varGroup.VERSION)
+                .from(varGroup)
+                .where(varGroup.PROJECT_ID.eq(projectId))
+                .and(varGroup.GROUP_NAME.eq(groupName))
+                .and(varGroup.LATEST_FLAG.eq(true))
+                .fetchOne(0, Int::class.java) ?: return emptyList()
+        } else {
+            version
+        }
+
         with(TResourcePublicVar.T_RESOURCE_PUBLIC_VAR) {
             val query = dslContext.selectFrom(this)
                 .where(GROUP_NAME.eq(groupName))
                 .and(PROJECT_ID.eq(projectId))
-                .and(VERSION.eq(version))
+                .and(VERSION.eq(actualVersion))
                 .apply {
                     varNameList?.takeIf { it.isNotEmpty() }?.let {
                         and(VAR_NAME.`in`(it))

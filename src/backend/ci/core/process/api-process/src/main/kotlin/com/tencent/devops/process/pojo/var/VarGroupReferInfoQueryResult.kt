@@ -35,5 +35,7 @@ data class VarGroupReferInfoQueryResult(
     @get:Schema(title = "总记录数")
     val totalCount: Int,
     @get:Schema(title = "引用信息列表")
-    val referInfos: List<ResourcePublicVarGroupReferPO>
+    val referInfos: List<ResourcePublicVarGroupReferPO>,
+    @get:Schema(title = "每个资源的变量引用数量")
+    val varRefCountMap: Map<String, Int> = emptyMap()
 )

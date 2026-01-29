@@ -604,7 +604,7 @@ class PublicVarGroupReleaseRecordService @Autowired constructor(
     ): List<PublicVarDO> {
         if (varPOs.isEmpty()) return emptyList()
 
-        // 批量查询引用计数（从 T_PIPELINE_PUBLIC_VAR_VERSION_SUMMARY 表读取，汇总所有版本）
+        // 批量查询引用计数（从 T_RESOURCE_PUBLIC_VAR_VERSION_SUMMARY 表读取，汇总所有版本）
         val varNames = varPOs.map { it.varName }
         val referCountMap = publicVarVersionSummaryDao.batchGetTotalReferCount(
             dslContext = dslContext,
