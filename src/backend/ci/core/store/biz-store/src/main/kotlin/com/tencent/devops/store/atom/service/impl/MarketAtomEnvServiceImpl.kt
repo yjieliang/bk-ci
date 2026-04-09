@@ -143,7 +143,8 @@ class MarketAtomEnvServiceImpl @Autowired constructor(
     private fun queryAtomRunInfos(
         projectCode: String,
         atomCodeList: List<String>,
-        atomVersions: Set<StoreVersion>
+        atomVersions: Set<StoreVersion>,
+        extraStatusList: List<Byte> = emptyList()
     ): Map<String, AtomRunInfo> {
         // 2、根据插件代码和版本号查找插件运行时信息
         // 判断当前项目是否是插件的调试项目
@@ -174,7 +175,8 @@ class MarketAtomEnvServiceImpl @Autowired constructor(
                     atomCode = atomCode,
                     atomName = atomName,
                     version = version,
-                    testFlag = testFlag
+                    testFlag = testFlag,
+                    extraStatusList = extraStatusList
                 )
             } else {
                 // 去缓存中获取插件运行时信息
@@ -189,7 +191,8 @@ class MarketAtomEnvServiceImpl @Autowired constructor(
                         atomCode = atomCode,
                         atomName = atomName,
                         version = version,
-                        testFlag = testFlag
+                        testFlag = testFlag,
+                        extraStatusList = extraStatusList
                     )
                 }
             }
@@ -222,9 +225,15 @@ class MarketAtomEnvServiceImpl @Autowired constructor(
         atomCode: String,
         atomName: String,
         version: String,
-        testFlag: Boolean
+        testFlag: Boolean,
+        extraStatusList: List<Byte> = emptyList()
     ): AtomRunInfo {
-        val atomEnvResult = getMarketAtomEnvInfo(projectCode, atomCode, version)
+        val atomEnvResult = getMarketAtomEnvInfo(
+            projectCode = projectCode,
+            atomCode = atomCode,
+            version = version,
+            extraStatusList = extraStatusList
+        )
         if (atomEnvResult.isNotOk()) {
             val params = arrayOf(projectCode, atomName)
             throw ErrorCodeException(
@@ -270,15 +279,16 @@ class MarketAtomEnvServiceImpl @Autowired constructor(
         atomStatus: Byte?,
         osName: String?,
         osArch: String?,
-        convertOsFlag: Boolean?
+        convertOsFlag: Boolean?,
+        extraStatusList: List<Byte>
     ): Result<AtomEnv?> {
         logger.info("getMarketAtomEnvInfo $projectCode,$atomCode,$version,$atomStatus,$osName,$osArch,$convertOsFlag")
         // 普通项目的查已发布、下架中和已下架（需要兼容那些还在使用已下架插件插件的项目）的插件
-        val normalStatusList = listOf(
+        val normalStatusList = (listOf(
             AtomStatusEnum.RELEASED.status.toByte(),
             AtomStatusEnum.UNDERCARRIAGING.status.toByte(),
             AtomStatusEnum.UNDERCARRIAGED.status.toByte()
-        )
+        ) + extraStatusList).distinct()
         val buildingFlag =
             projectCode == storeInnerPipelineConfig.innerPipelineProject && atomStatus == AtomStatusEnum.BUILDING.status.toByte()
         val atomStatusList = getAtomStatusList(
@@ -534,7 +544,9 @@ class MarketAtomEnvServiceImpl @Autowired constructor(
         val atomRunInfos = queryAtomRunInfos(
             projectCode = projectCode,
             atomCodeList = atomVersions.map { it.storeCode },
-            atomVersions = atomVersions
+            atomVersions = atomVersions,
+            // 构建详情页展示历史数据，需兼容取消发布（GROUNDING_SUSPENSION）状态的插件版本
+            extraStatusList = listOf(AtomStatusEnum.GROUNDING_SUSPENSION.status.toByte())
         )
         val atomSensitiveParamInfos = mutableMapOf<String, String>()
         atomRunInfos.forEach { key, atomRunInfo ->
