@@ -51,6 +51,10 @@ class NodeJsAtomRunConditionHandleServiceImpl : AtomRunConditionHandleService {
     companion object {
         private val logger = LoggerFactory.getLogger(NodeJsAtomRunConditionHandleServiceImpl::class.java)
         private const val RETRY_NUM = 3
+        private const val EXT_TAR_XZ = ".tar.xz"
+        private const val EXT_TAR_GZ = ".tar.gz"
+        private const val EXT_ZIP = ".zip"
+        private val SUPPORTED_EXTENSIONS = listOf(EXT_TAR_XZ, EXT_TAR_GZ, EXT_ZIP)
     }
 
     override fun prepareRunEnv(
@@ -81,11 +85,7 @@ class NodeJsAtomRunConditionHandleServiceImpl : AtomRunConditionHandleService {
         storePkgRunEnvInfo?.let {
             val pkgName = storePkgRunEnvInfo.pkgName
             val pkgFile = File(envDir, "$NODEJS/$pkgName")
-            val pkgFileFolderName = if (osType == OSType.WINDOWS) {
-                pkgName.removeSuffix(".zip")
-            } else {
-                pkgName.removeSuffix(".tar.gz")
-            }
+            val pkgFileFolderName = stripCompressionExtension(pkgName)
             val pkgFileDir = File(envDir, "$NODEJS/$pkgFileFolderName")
             val nodejsPath = getNodejsPath(osType, pkgFileDir)
             // 把nodejs执行路径写入系统变量
@@ -125,6 +125,61 @@ class NodeJsAtomRunConditionHandleServiceImpl : AtomRunConditionHandleService {
         return nodejsPath
     }
 
+    /**
+     * 根据文件名识别压缩格式后缀
+     * 支持识别 .tar.xz、.tar.gz、.zip 三种格式
+     * 未匹配到任何已知后缀时返回空字符串
+     */
+    private fun getFileExtension(fileName: String): String {
+        return SUPPORTED_EXTENSIONS.firstOrNull { fileName.endsWith(it) } ?: ""
+    }
+
+    /**
+     * 剥离文件名中的压缩格式后缀，得到解压后的目录名
+     * 若文件名不包含已知后缀，则保持原文件名
+     */
+    private fun stripCompressionExtension(fileName: String): String {
+        val ext = getFileExtension(fileName)
+        return if (ext.isNotEmpty()) fileName.removeSuffix(ext) else fileName
+    }
+
+    /**
+     * 根据包名后缀生成对应的解压命令
+     * - .tar.xz: tar -xJf
+     * - .tar.gz: tar -xzf
+     * - .zip:    unzip
+     */
+    private fun buildExtractCommand(pkgName: String): String {
+        return when (getFileExtension(pkgName)) {
+            EXT_TAR_XZ -> "tar -xJf $pkgName"
+            EXT_TAR_GZ -> "tar -xzf $pkgName"
+            EXT_ZIP -> "unzip $pkgName"
+            else -> "tar -xzf $pkgName"
+        }
+    }
+
+    /**
+     * 检测构建机 xz 工具可用性
+     * 通过执行 `xz --version` 校验环境是否安装 xz
+     * 未安装时抛出 TaskExecuteException 并提示安装方式
+     */
+    private fun checkXzToolAvailable(envDir: File) {
+        try {
+            CommandLineUtils.execute(
+                command = "xz --version",
+                workspace = envDir,
+                print2Logger = false
+            )
+        } catch (ignored: Throwable) {
+            logger.warn("xz tool not available on build machine", ignored)
+            throw TaskExecuteException(
+                errorType = ErrorType.SYSTEM,
+                errorCode = ErrorCode.SYSTEM_WORKER_LOADING_ERROR,
+                errorMsg = "xz tool not found, please install 'xz-utils' (Debian/Ubuntu) or 'xz' (CentOS/RHEL)"
+            )
+        }
+    }
+
     override fun handleAtomTarget(
         target: String,
         osType: OSType,
@@ -150,7 +205,7 @@ class NodeJsAtomRunConditionHandleServiceImpl : AtomRunConditionHandleService {
         runtimeVersion: String?
     ): String {
         val preCmds = CommonUtils.strToList(preCmd).toMutableList()
-        preCmds.add(0, "tar -xzf $pkgName")
+        preCmds.add(0, buildExtractCommand(pkgName))
         logger.info("handleAtomPreCmd convertPreCmd:$preCmds")
         return JsonUtil.toJson(preCmds, false)
     }
@@ -174,18 +229,36 @@ class NodeJsAtomRunConditionHandleServiceImpl : AtomRunConditionHandleService {
         if (pkgFile.exists()) {
             pkgFile.delete()
         }
+        var extractCommand: String? = null
         try {
             // 把指定的nodejs安装包下载到构建机上, 下载超时时间配置180秒
-            OkhttpUtils.downloadFile(
-                url = pkgDownloadPath,
-                destPath = pkgFile,
-                readTimeoutInSec = 180
-            )
+            try {
+                OkhttpUtils.downloadFile(
+                    url = pkgDownloadPath,
+                    destPath = pkgFile,
+                    readTimeoutInSec = 180
+                )
+            } catch (downloadEx: Throwable) {
+                logger.warn(
+                    "download nodejs pkg fail, url:$pkgDownloadPath, dest:${pkgFile.absolutePath}",
+                    downloadEx
+                )
+                throw downloadEx
+            }
             logger.info("prepareRunEnv download [$pkgName] success")
             if (osType == OSType.WINDOWS) {
                 ZipUtil.unZipFile(pkgFile, pkgFileDir.absolutePath, false)
             } else {
-                CommandLineUtils.execute("tar -xzf $pkgName", File(envDir, NODEJS), print2Logger = true)
+                // 针对 xz 格式包，提前检测构建机 xz 工具可用性
+                if (getFileExtension(pkgName) == EXT_TAR_XZ) {
+                    checkXzToolAvailable(File(envDir, NODEJS))
+                }
+                extractCommand = buildExtractCommand(pkgName)
+                CommandLineUtils.execute(
+                    command = extractCommand,
+                    workspace = File(envDir, NODEJS),
+                    print2Logger = true
+                )
             }
             CommandLineUtils.execute(
                 command = command,
@@ -195,6 +268,11 @@ class NodeJsAtomRunConditionHandleServiceImpl : AtomRunConditionHandleService {
             logger.info("prepareRunEnv decompress [$pkgName] success")
         } catch (ignored: Throwable) {
             if (retryNum == 0) {
+                logger.warn(
+                    "prepare nodejs env fail after all retries, pkg:$pkgName, " +
+                        "extractCmd:$extractCommand, cause:${ignored.message}",
+                    ignored
+                )
                 throw TaskExecuteException(
                     errorType = ErrorType.SYSTEM,
                     errorCode = ErrorCode.SYSTEM_WORKER_LOADING_ERROR,
@@ -203,8 +281,10 @@ class NodeJsAtomRunConditionHandleServiceImpl : AtomRunConditionHandleService {
             }
             logger.warn(
                 "unZip nodePkg[$pkgName] fail, retryNum: $retryNum, " +
-                    "failScript Command: $command, " +
-                    "Cause of error: ${ignored.message}", ignored
+                    "extractCmd: $extractCommand, " +
+                    "verifyCmd: $command, " +
+                    "Cause of error: ${ignored.message}",
+                ignored
             )
             prepareNodeJsEnv(
                 retryNum = retryNum - 1,
