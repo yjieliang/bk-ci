@@ -35,6 +35,7 @@ import com.tencent.bk.audit.annotations.AuditInstanceRecord
 import com.tencent.bk.audit.context.ActionAuditContext
 import com.tencent.devops.common.api.constant.CommonMessageCode
 import com.tencent.devops.common.api.constant.CommonMessageCode.USER_NOT_PERMISSIONS_OPERATE_PIPELINE
+import com.tencent.devops.common.api.constant.SYSTEM
 import com.tencent.devops.common.api.exception.ErrorCodeException
 import com.tencent.devops.common.api.exception.OperationException
 import com.tencent.devops.common.api.exception.PermissionForbiddenException
@@ -1848,20 +1849,28 @@ class PipelineInfoFacadeService @Autowired constructor(
         )
     }
 
-    fun locked(userId: String, projectId: String, pipelineId: String, locked: Boolean): PipelineInfo {
-        val language = I18nUtil.getLanguage(userId)
-        val permission = AuthPermission.EDIT
-        pipelinePermissionService.validPipelinePermission(
-            userId = userId,
-            projectId = projectId,
-            pipelineId = pipelineId,
-            permission = permission,
-            message = MessageUtil.getMessageByLocale(
-                messageCode = USER_NOT_PERMISSIONS_OPERATE_PIPELINE,
-                language = language,
-                params = arrayOf(userId, projectId, permission.getI18n(language), pipelineId)
+    fun locked(
+        userId: String,
+        projectId: String,
+        pipelineId: String,
+        locked: Boolean
+    ): PipelineInfo {
+        // 系统级调用(userId=SYSTEM)跳过权限校验，避免依赖 system 是否具备该流水线的 EDIT 权限
+        if (userId != SYSTEM) {
+            val language = I18nUtil.getLanguage(userId)
+            val permission = AuthPermission.EDIT
+            pipelinePermissionService.validPipelinePermission(
+                userId = userId,
+                projectId = projectId,
+                pipelineId = pipelineId,
+                permission = permission,
+                message = MessageUtil.getMessageByLocale(
+                    messageCode = USER_NOT_PERMISSIONS_OPERATE_PIPELINE,
+                    language = language,
+                    params = arrayOf(userId, projectId, permission.getI18n(language), pipelineId)
+                )
             )
-        )
+        }
 
         val info = pipelineRepositoryService.getPipelineInfo(projectId, pipelineId)
             ?: throw ErrorCodeException(
